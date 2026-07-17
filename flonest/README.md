@@ -1,6 +1,6 @@
-# FloNest 🌸 (MERN Period Tracker)
+# Lunaflow 🌸 (MERN Period Tracker)
 
-FloNest is a production-ready, beautiful, and private Menstrual Cycle & Period Tracker built using the MERN stack (MongoDB, Express, React, Node.js). 
+Lunaflow is a production-ready, beautiful, and private Menstrual Cycle & Period Tracker built using the MERN stack (MongoDB, Express, React, Node.js). 
 
 It features an elegant, responsive, and dynamic UI styled with Tailwind CSS, custom page transition animations using Framer Motion, JWT-based secure authentication, and intelligent cycle calculations (cycle duration, next period forecasts, ovulation dates, fertile windows, and self-care recommendations).
 
