@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: flonest-mongo
+  namespace: flonest
+spec:
+  serviceName: flonest-mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flonest-mongo
+  template:
+    metadata:
+      labels:
+        app: flonest-mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:7
+          ports:
+            - containerPort: 27017
+              name: mongodb
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi

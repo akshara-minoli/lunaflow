@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flonest-api
+  namespace: flonest
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flonest-api
+  template:
+    metadata:
+      labels:
+        app: flonest-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/akshara-minoli/flonest-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: flonest-config
+            - secretRef:
+                name: flonest-secrets
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20

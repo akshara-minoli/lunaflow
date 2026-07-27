@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flonest-web
+  namespace: flonest
+spec:
+  selector:
+    app: flonest-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

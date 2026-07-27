@@ -44,6 +44,14 @@ app.use('/api/periods', periodRoutes);
 app.use('/api/symptoms', symptomRoutes);
 app.use('/api/predictions', predictionRoutes);
 
+// Health check for container orchestration and load balancers
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'FloNest API is healthy'
+  });
+});
+
 // Catch-all (404 Resource Not Found) handler
 app.use((req, res, next) => {
   res.status(404).json({

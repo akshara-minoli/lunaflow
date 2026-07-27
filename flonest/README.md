@@ -4,6 +4,8 @@ Lunaflow is a production-ready, beautiful, and private Menstrual Cycle & Period 
 
 It features an elegant, responsive, and dynamic UI styled with Tailwind CSS, custom page transition animations using Framer Motion, JWT-based secure authentication, and intelligent cycle calculations (cycle duration, next period forecasts, ovulation dates, fertile windows, and self-care recommendations).
 
+Repository: [https://github.com/akshara-minoli/lunaflow.git](https://github.com/akshara-minoli/lunaflow.git)
+
 ---
 
 ## Key Features
@@ -116,6 +118,66 @@ npm run dev
 # Run client (from flonest/client)
 npm run dev
 ```
+
+### Docker
+The repository now includes production-ready Dockerfiles and a compose file for the full stack.
+
+```bash
+docker compose up --build
+```
+
+This starts MongoDB, the API, and the Nginx-served frontend with `/api` proxied to the backend.
+
+### Kubernetes
+Kubernetes manifests live under `k8s/base/`.
+
+Before applying them, create the `flonest-secrets` secret with values for `MONGO_URI`, `JWT_SECRET`, and optional email settings, then apply the base:
+
+```bash
+kubectl apply -k k8s/base
+```
+
+The ingress routes the public host to the frontend and the `/api` path to the backend.
+
+### CI/CD
+GitHub Actions workflows are included for:
+
+- `CI`: installs dependencies and builds the client on pushes and pull requests.
+- `CD`: builds and pushes Docker images to GHCR, then deploys to Kubernetes when `KUBE_CONFIG_DATA` is available.
+
+### Jenkins CI/CD
+This repository also includes a root `Jenkinsfile` for a Jenkins-based pipeline.
+
+The pipeline:
+
+- installs dependencies for the root, client, and server workspaces
+- builds the client with `/api` as the runtime API base
+- verifies the server app loads
+- builds Docker images for the API and web app
+- pushes images on `main` or `master`
+- deploys to Kubernetes using the manifests in `k8s/base/`
+
+Required Jenkins credentials:
+
+- `ghcr-token`: a GitHub Container Registry token with package write access
+- `kubeconfig`: a Jenkins file credential containing your cluster kubeconfig
+- `flonest-mongo-uri`
+- `flonest-jwt-secret`
+- `flonest-email-host`
+- `flonest-email-port`
+- `flonest-email-user`
+- `flonest-email-pass`
+
+Recommended Jenkins setup:
+
+1. Create a Multibranch Pipeline or Pipeline job that points at this repository.
+2. Ensure the agent has Node.js, Docker, and kubectl available.
+3. Run the job from the repository root so `Jenkinsfile` and `k8s/base/` resolve correctly.
+
+If Jenkins itself runs in Docker, mount the host Docker socket into the Jenkins
+container (`/var/run/docker.sock:/var/run/docker.sock`). The Jenkinsfile uses
+that socket explicitly and clears stale Docker-in-Docker TLS variables, which
+otherwise make Docker look for an unavailable `/certs/client/ca.pem` file.
 
 ---
 

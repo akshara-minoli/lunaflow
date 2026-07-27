@@ -1,0 +1,25 @@
+services:
+  jenkins:
+    build:
+      context: .
+      args:
+        # Set this to a kubectl version compatible with your Kubernetes cluster.
+        KUBECTL_VERSION: ${KUBECTL_VERSION:-v1.31.0}
+    image: flonest-jenkins:local
+    container_name: flonest-jenkins
+    restart: unless-stopped
+    user: root
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      # Explicitly select the mounted host socket, not a TLS DinD daemon.
+      DOCKER_HOST: unix:///var/run/docker.sock
+      DOCKER_TLS_VERIFY: ""
+      DOCKER_CERT_PATH: ""
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=true
+    volumes:
+      # Same path on host and controller is required because the host Docker
+      # daemon resolves "$WORKSPACE" for the pipeline's `docker run -v` calls.
+      - /var/jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: ["/usr/local/bin/jenkins-docker-entrypoint.sh"]
