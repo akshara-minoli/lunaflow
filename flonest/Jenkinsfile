@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        node {
-            label 'any'
-            customWorkspace 'flonest-clean'
-        }
-    }
+    agent any
 
     options {
         timestamps()
@@ -29,8 +24,10 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: env.BRANCH_NAME ?: 'main', url: 'https://github.com/akshara-minoli/lunaflow.git'
-                echo "Building repository: https://github.com/akshara-minoli/lunaflow.git"
+                ws('flonest-clean') {
+                    git branch: env.BRANCH_NAME ?: 'main', url: 'https://github.com/akshara-minoli/lunaflow.git'
+                    echo "Building repository: https://github.com/akshara-minoli/lunaflow.git"
+                }
             }
         }
 
@@ -38,11 +35,13 @@ pipeline {
             stages {
                 stage('Verify Docker access') {
                     steps {
-                        dir('flonest') {
-                            sh '''
-                                docker version
-                                docker run --rm hello-world
-                            '''
+                        ws('flonest-clean') {
+                            dir('flonest') {
+                                sh '''
+                                    docker version
+                                    docker run --rm hello-world
+                                '''
+                            }
                         }
                     }
                 }
@@ -50,14 +49,16 @@ pipeline {
                 // CI: install dependencies for the workspace, backend, and frontend.
                 stage('Install') {
                     steps {
-                        dir('flonest') {
-                            sh '''
-                                docker run --rm \
-                                  --user "$(id -u):$(id -g)" \
-                                  --volumes-from "$HOSTNAME" \
-                                  -w "$PWD" \
-                                  node:20-alpine sh -lc "npm install && npm install --prefix server && npm install --prefix client"
-                            '''
+                        ws('flonest-clean') {
+                            dir('flonest') {
+                                sh '''
+                                    docker run --rm \
+                                      --user "$(id -u):$(id -g)" \
+                                      --volumes-from "$HOSTNAME" \
+                                      -w "$PWD" \
+                                      node:20-alpine sh -lc "npm install && npm install --prefix server && npm install --prefix client"
+                                '''
+                            }
                         }
                     }
                 }
@@ -65,15 +66,17 @@ pipeline {
                 // CI: build the frontend with the production API base path.
                 stage('Build Client') {
                     steps {
-                        dir('flonest') {
-                            sh '''
-                                docker run --rm \
-                                  --user "$(id -u):$(id -g)" \
-                                  --volumes-from "$HOSTNAME" \
-                                  -w "$PWD" \
-                                  -e VITE_API_URL=/api \
-                                  node:20-alpine sh -lc "npm run build --prefix client"
-                            '''
+                        ws('flonest-clean') {
+                            dir('flonest') {
+                                sh '''
+                                    docker run --rm \
+                                      --user "$(id -u):$(id -g)" \
+                                      --volumes-from "$HOSTNAME" \
+                                      -w "$PWD" \
+                                      -e VITE_API_URL=/api \
+                                      node:20-alpine sh -lc "npm run build --prefix client"
+                                '''
+                            }
                         }
                     }
                 }
@@ -81,14 +84,16 @@ pipeline {
                 // CI: verify the backend app can load without booting the full server.
                 stage('Verify Server') {
                     steps {
-                        dir('flonest') {
-                            sh '''
-                                docker run --rm \
-                                  --user "$(id -u):$(id -g)" \
-                                  --volumes-from "$HOSTNAME" \
-                                  -w "$PWD" \
-                                                                    node:20-alpine node -e "require('./server/app'); console.log('Server app loaded successfully')"
-                            '''
+                        ws('flonest-clean') {
+                            dir('flonest') {
+                                sh '''
+                                    docker run --rm \
+                                      --user "$(id -u):$(id -g)" \
+                                      --volumes-from "$HOSTNAME" \
+                                      -w "$PWD" \
+                                      node:20-alpine node -e "require('./server/app'); console.log('Server app loaded successfully')"
+                                '''
+                            }
                         }
                     }
                 }
@@ -98,9 +103,11 @@ pipeline {
         // CD: build the deployable Docker images for the API and web app.
         stage('Build Docker Images') {
             steps {
-                dir('flonest') {
-                    sh 'docker build -t ${SERVER_IMAGE}:${GIT_COMMIT} server'
-                    sh 'docker build --build-arg VITE_API_URL=/api -t ${CLIENT_IMAGE}:${GIT_COMMIT} client'
+                ws('flonest-clean') {
+                    dir('flonest') {
+                        sh 'docker build -t ${SERVER_IMAGE}:${GIT_COMMIT} server'
+                        sh 'docker build --build-arg VITE_API_URL=/api -t ${CLIENT_IMAGE}:${GIT_COMMIT} client'
+                    }
                 }
             }
         }
@@ -112,15 +119,17 @@ pipeline {
             }
             steps {
                 withCredentials([string(credentialsId: 'ghcr-token', variable: 'GHCR_TOKEN')]) {
-                    sh '''
-                        echo "$GHCR_TOKEN" | docker login ${REGISTRY} -u ${IMAGE_OWNER} --password-stdin
-                        docker tag ${SERVER_IMAGE}:${GIT_COMMIT} ${SERVER_IMAGE}:latest
-                        docker tag ${CLIENT_IMAGE}:${GIT_COMMIT} ${CLIENT_IMAGE}:latest
-                        docker push ${SERVER_IMAGE}:${GIT_COMMIT}
-                        docker push ${SERVER_IMAGE}:latest
-                        docker push ${CLIENT_IMAGE}:${GIT_COMMIT}
-                        docker push ${CLIENT_IMAGE}:latest
-                    '''
+                    ws('flonest-clean') {
+                        sh '''
+                            echo "$GHCR_TOKEN" | docker login ${REGISTRY} -u ${IMAGE_OWNER} --password-stdin
+                            docker tag ${SERVER_IMAGE}:${GIT_COMMIT} ${SERVER_IMAGE}:latest
+                            docker tag ${CLIENT_IMAGE}:${GIT_COMMIT} ${CLIENT_IMAGE}:latest
+                            docker push ${SERVER_IMAGE}:${GIT_COMMIT}
+                            docker push ${SERVER_IMAGE}:latest
+                            docker push ${CLIENT_IMAGE}:${GIT_COMMIT}
+                            docker push ${CLIENT_IMAGE}:latest
+                        '''
+                    }
                 }
             }
         }
@@ -140,22 +149,24 @@ pipeline {
                     string(credentialsId: 'flonest-email-user', variable: 'EMAIL_USER'),
                     string(credentialsId: 'flonest-email-pass', variable: 'EMAIL_PASS')
                 ]) {
-                    dir('flonest') {
-                        sh '''
-                            export KUBECONFIG="$KUBECONFIG_FILE"
-                            kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
-                            kubectl -n ${K8S_NAMESPACE} create secret generic flonest-secrets \
-                              --from-literal=MONGO_URI="$MONGO_URI" \
-                              --from-literal=JWT_SECRET="$JWT_SECRET" \
-                              --from-literal=EMAIL_HOST="$EMAIL_HOST" \
-                              --from-literal=EMAIL_PORT="$EMAIL_PORT" \
-                              --from-literal=EMAIL_USER="$EMAIL_USER" \
-                              --from-literal=EMAIL_PASS="$EMAIL_PASS" \
-                              --dry-run=client -o yaml | kubectl apply -f -
-                            kubectl apply -k k8s/base
-                            kubectl -n ${K8S_NAMESPACE} rollout status deployment/flonest-api --timeout=180s
-                            kubectl -n ${K8S_NAMESPACE} rollout status deployment/flonest-web --timeout=180s
-                        '''
+                    ws('flonest-clean') {
+                        dir('flonest') {
+                            sh '''
+                                export KUBECONFIG="$KUBECONFIG_FILE"
+                                kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+                                kubectl -n ${K8S_NAMESPACE} create secret generic flonest-secrets \
+                                  --from-literal=MONGO_URI="$MONGO_URI" \
+                                  --from-literal=JWT_SECRET="$JWT_SECRET" \
+                                  --from-literal=EMAIL_HOST="$EMAIL_HOST" \
+                                  --from-literal=EMAIL_PORT="$EMAIL_PORT" \
+                                  --from-literal=EMAIL_USER="$EMAIL_USER" \
+                                  --from-literal=EMAIL_PASS="$EMAIL_PASS" \
+                                  --dry-run=client -o yaml | kubectl apply -f -
+                                kubectl apply -k k8s/base
+                                kubectl -n ${K8S_NAMESPACE} rollout status deployment/flonest-api --timeout=180s
+                                kubectl -n ${K8S_NAMESPACE} rollout status deployment/flonest-web --timeout=180s
+                            '''
+                        }
                     }
                 }
             }
@@ -164,7 +175,11 @@ pipeline {
 
     post {
         always {
-            deleteDir()
+            script {
+                if (env.WORKSPACE) {
+                    deleteDir()
+                }
+            }
         }
     }
 }
