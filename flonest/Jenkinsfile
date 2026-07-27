@@ -105,8 +105,11 @@ pipeline {
             steps {
                 ws('flonest-clean') {
                     dir('flonest') {
-                        sh 'docker build -t ${SERVER_IMAGE}:${GIT_COMMIT} server'
-                        sh 'docker build --build-arg VITE_API_URL=/api -t ${CLIENT_IMAGE}:${GIT_COMMIT} client'
+                        sh '''
+                            IMAGE_TAG=$(git rev-parse --short=12 HEAD)
+                            docker build -t ${SERVER_IMAGE}:$IMAGE_TAG server
+                            docker build --build-arg VITE_API_URL=/api -t ${CLIENT_IMAGE}:$IMAGE_TAG client
+                        '''
                     }
                 }
             }
@@ -121,12 +124,13 @@ pipeline {
                 withCredentials([string(credentialsId: 'ghcr-token', variable: 'GHCR_TOKEN')]) {
                     ws('flonest-clean') {
                         sh '''
+                            IMAGE_TAG=$(git rev-parse --short=12 HEAD)
                             echo "$GHCR_TOKEN" | docker login ${REGISTRY} -u ${IMAGE_OWNER} --password-stdin
-                            docker tag ${SERVER_IMAGE}:${GIT_COMMIT} ${SERVER_IMAGE}:latest
-                            docker tag ${CLIENT_IMAGE}:${GIT_COMMIT} ${CLIENT_IMAGE}:latest
-                            docker push ${SERVER_IMAGE}:${GIT_COMMIT}
+                            docker tag ${SERVER_IMAGE}:$IMAGE_TAG ${SERVER_IMAGE}:latest
+                            docker tag ${CLIENT_IMAGE}:$IMAGE_TAG ${CLIENT_IMAGE}:latest
+                            docker push ${SERVER_IMAGE}:$IMAGE_TAG
                             docker push ${SERVER_IMAGE}:latest
-                            docker push ${CLIENT_IMAGE}:${GIT_COMMIT}
+                            docker push ${CLIENT_IMAGE}:$IMAGE_TAG
                             docker push ${CLIENT_IMAGE}:latest
                         '''
                     }
