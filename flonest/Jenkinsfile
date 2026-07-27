@@ -1,9 +1,15 @@
 pipeline {
-    agent any
+    agent {
+        node {
+            label 'any'
+            customWorkspace 'flonest-clean'
+        }
+    }
 
     options {
         timestamps()
         disableConcurrentBuilds()
+        skipDefaultCheckout(true)
     }
 
     environment {
