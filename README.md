@@ -1,2 +1,152 @@
 Containerized CI/CD Application
 Docker • Jenkins • Kubernetes • GHCR
+
+Lunaflow is a production-ready, beautiful, and private Menstrual Cycle & Period Tracker built using the MERN stack (MongoDB, Express, React, Node.js).
+
+It features an elegant, responsive, and dynamic UI styled with Tailwind CSS, custom page transition animations using Framer Motion, JWT-based secure authentication, and intelligent cycle calculations (cycle duration, next period forecasts, ovulation dates, fertile windows, and self-care recommendations).
+
+Repository: https://github.com/akshara-minoli/lunaflow.git
+
+Key Features
+Intelligent Predictions: Calculates your next period start/end dates, predicted ovulation day, and fertile window based on your logging trends.
+Symptom & Mood Journal: Log flow intensities (light, medium, heavy), moods (calm, energetic, happy, sad, etc.), and symptoms (cramps, bloating, fatigue, etc.) with custom personal notes.
+Self-Care Advisor: Dynamic health suggestions tailored to the active phase of your cycle (Menstrual, Follicular, Ovulatory, Luteal).
+Responsive Layout: Designed for seamless use on desktop, tablet, and mobile screens.
+Secure Password Hashing: Passwords stored safely using bcryptjs and verified through JWT HTTP-only cookies.
+Folder Structure
+flonest/
+├── client/                 # Frontend React (Vite) Application
+│   ├── src/
+│   │   ├── assets/         # App logos, graphics
+│   │   ├── components/     # Reusable layout and helper elements
+│   │   │   ├── Common/     # Route guards (ProtectedRoute)
+│   │   │   └── Layout/     # Navbar, Footer, Layout shells
+│   │   ├── context/        # Global states (AuthContext)
+│   │   ├── pages/          # Welcome, Login, Register, Recovery
+│   │   ├── utils/          # Axios configurations (api.js)
+│   │   ├── App.jsx         # Routing and wrapper structures
+│   │   ├── index.css       # Tailwind base layers and glassmorphic designs
+│   │   └── main.jsx        # Mount point
+│   ├── package.json        # Frontend scripts and packages
+│   └── .env.example        # Frontend environment variables template
+│
+├── server/                 # Backend Node.js / Express Server API
+│   ├── config/             # Database connection setups
+│   ├── controllers/        # Route controllers (Auth, Cycles logs)
+│   ├── middleware/         # Security guards (Auth protections)
+│   ├── models/             # Database Schemas (User, Cycle logs)
+│   ├── routes/             # Express API endpoints
+│   ├── package.json        # Backend scripts and packages
+│   ├── server.js           # Server application startup
+│   └── .env.example        # Backend environment variables template
+│
+├── package.json            # Root Orchestrator script runner
+└── .gitignore              # Git ignore rules
+Getting Started
+Prerequisites
+Make sure you have Node.js installed and a running MongoDB instance (either local or Atlas).
+
+1. Clone & Install Dependencies
+Run the command below in the project root directory (flonest/) to install root, backend, and frontend packages simultaneously:
+
+# Install root, backend, and frontend packages
+npm run install-all
+Alternatively, you can install packages independently:
+
+# In flonest/server/
+npm install
+
+# In flonest/client/
+npm install
+2. Configure Environment Variables
+Backend (flonest/server/.env)
+Create a .env file in the server folder (or copy .env.example) and fill in your credentials:
+
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/flonest
+JWT_SECRET=your_super_secret_jwt_key_here
+CLIENT_URL=http://localhost:5173
+NODE_ENV=development
+Frontend (flonest/client/.env)
+Create a .env file in the client folder (or copy .env.example):
+
+VITE_API_URL=http://localhost:5000/api
+Running the Application
+Development Mode
+To start both the backend server and the frontend client simultaneously in development mode (with hot reloading), execute:
+
+# Run from flonest/
+npm run dev
+This starts:
+
+Backend API at: http://localhost:5000
+Frontend UI at: http://localhost:5173
+Run Separately
+If you prefer to run services in separate terminals:
+
+# Run server (from flonest/server)
+npm run dev
+
+# Run client (from flonest/client)
+npm run dev
+Docker
+The repository now includes production-ready Dockerfiles and a compose file for the full stack.
+
+docker compose up --build
+This starts MongoDB, the API, and the Nginx-served frontend with /api proxied to the backend.
+
+Kubernetes
+Kubernetes manifests live under k8s/base/.
+
+Before applying them, create the flonest-secrets secret with values for MONGO_URI, JWT_SECRET, and optional email settings, then apply the base:
+
+kubectl apply -k k8s/base
+The ingress routes the public host to the frontend and the /api path to the backend.
+
+CI/CD
+GitHub Actions workflows are included for:
+
+CI: installs dependencies and builds the client on pushes and pull requests.
+CD: builds and pushes Docker images to GHCR, then deploys to Kubernetes when KUBE_CONFIG_DATA is available.
+Jenkins CI/CD
+This repository also includes a root Jenkinsfile for a Jenkins-based pipeline.
+
+The pipeline:
+
+installs dependencies for the root, client, and server workspaces
+builds the client with /api as the runtime API base
+verifies the server app loads
+builds Docker images for the API and web app
+pushes images on main or master
+deploys to Kubernetes using the manifests in k8s/base/
+Required Jenkins credentials:
+
+ghcr-token: a GitHub Container Registry token with package write access
+kubeconfig: a Jenkins file credential containing your cluster kubeconfig
+flonest-mongo-uri
+flonest-jwt-secret
+flonest-email-host
+flonest-email-port
+flonest-email-user
+flonest-email-pass
+Recommended Jenkins setup:
+
+Create a Multibranch Pipeline or Pipeline job that points at this repository.
+Ensure the agent has Node.js, Docker, and kubectl available.
+Run the job from the repository root so Jenkinsfile and k8s/base/ resolve correctly.
+If Jenkins itself runs in Docker, mount the host Docker socket into the Jenkins container (/var/run/docker.sock:/var/run/docker.sock). The Jenkinsfile uses that socket explicitly and clears stale Docker-in-Docker TLS variables, which otherwise make Docker look for an unavailable /certs/client/ca.pem file.
+
+API Endpoints
+Authentication Routes (/api/auth)
+POST /register: Registers a new account.
+POST /login: Log in to an account (sets HTTP-only auth cookie).
+GET /logout: Logs out user (clears auth cookie).
+GET /me: Gets the profile of the current logged-in user (Protected).
+POST /forgotpassword: Triggers generating reset token (Mocks emails to console in Dev).
+PUT /resetpassword/:resettoken: Updates account password.
+Cycle & Tracker Routes (/api/cycles)
+GET /: Get all cycle log entries for the current user (Protected).
+POST /: Create a new period cycle log entry (Protected).
+GET /insights: Get predicted period start/end dates, ovulation date, fertile window, and averages (Protected).
+PUT /:id: Update details of a logged entry (Protected).
+DELETE /:id: Remove a log entry (Protected).
