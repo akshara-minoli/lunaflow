@@ -20,7 +20,8 @@ COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
 COPY jenkins-docker-entrypoint.sh /usr/local/bin/jenkins-docker-entrypoint.sh
 COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
 
-RUN chmod 0755 /usr/local/bin/jenkins-docker-entrypoint.sh \
+RUN sed -i 's/\r$//' /usr/local/bin/jenkins-docker-entrypoint.sh \
+    && chmod 0755 /usr/local/bin/jenkins-docker-entrypoint.sh \
     && jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 USER jenkins
