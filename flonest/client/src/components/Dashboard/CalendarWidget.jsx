@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { calendarDate, localDateKey } from '../../utils/calendarDate';
 import { ChevronLeft, ChevronRight, Droplet, Heart, Sparkles, Plus, Star } from 'lucide-react';
 
 const CalendarWidget = ({ periods, symptoms, predictions, onAddPeriodDate, onLogSymptomDate }) => {
@@ -26,7 +27,7 @@ const CalendarWidget = ({ periods, symptoms, predictions, onAddPeriodDate, onLog
   // Helper date matching (removes hour details)
   const isSameDay = (d1Str, d2) => {
     if (!d1Str || !d2) return false;
-    const d1 = new Date(d1Str);
+    const d1 = calendarDate(d1Str);
     return d1.getFullYear() === d2.getFullYear() &&
            d1.getMonth() === d2.getMonth() &&
            d1.getDate() === d2.getDate();
@@ -59,9 +60,9 @@ const CalendarWidget = ({ periods, symptoms, predictions, onAddPeriodDate, onLog
 
     // 1. Period matching
     periods.forEach(p => {
-      const start = new Date(p.startDate);
+      const start = calendarDate(p.startDate);
       start.setHours(0,0,0,0);
-      const end = p.endDate ? new Date(p.endDate) : new Date(p.startDate);
+      const end = p.endDate ? calendarDate(p.endDate) : calendarDate(p.startDate);
       end.setHours(23,59,59,999);
       if (date >= start && date <= end) {
         isPeriod = true;
@@ -74,8 +75,8 @@ const CalendarWidget = ({ periods, symptoms, predictions, onAddPeriodDate, onLog
         isOvulation = true;
       }
       if (predictions.fertileWindow) {
-        const start = new Date(predictions.fertileWindow.start);
-        const end = new Date(predictions.fertileWindow.end);
+        const start = calendarDate(predictions.fertileWindow.start);
+        const end = calendarDate(predictions.fertileWindow.end);
         if (date >= start && date <= end) {
           isFertile = true;
         }
@@ -89,7 +90,7 @@ const CalendarWidget = ({ periods, symptoms, predictions, onAddPeriodDate, onLog
       }
     });
 
-    const isToday = isSameDay(new Date().toISOString(), date);
+    const isToday = isSameDay(localDateKey(), date);
 
     return { isPeriod, isFertile, isOvulation, loggedSymptom, isToday };
   };

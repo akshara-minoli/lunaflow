@@ -1,10 +1,11 @@
+import { calendarDate } from '../../utils/calendarDate';
 import React from 'react';
 import { Calendar, Trash2, Edit3, Droplet, Info } from 'lucide-react';
 
 const RecentPeriodTable = ({ periods, onEdit, onDelete }) => {
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return calendarDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   if (!periods || periods.length === 0) {

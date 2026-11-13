@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../utils/api';
+import { localDateKey, watchCalendarDate } from '../utils/calendarDate';
 import { useAuth } from '../context/AuthContext';
 
 // Layout & Common components
@@ -46,7 +47,7 @@ const Dashboard = () => {
   // Add Symptom Modal state
   const [isSymptomModalOpen, setIsSymptomModalOpen] = useState(false);
   const [symptomForm, setSymptomForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: localDateKey(),
     cramps: false, headache: false, fatigue: false,
     moodSwings: false, acne: false, bloating: false,
     backPain: false, nausea: false,
@@ -68,28 +69,33 @@ const Dashboard = () => {
     { key: 'nausea', label: 'Nausea' }
   ];
 
+  const fetchVersion = useRef(0);
+
   // Fetching orchestration
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (background = false) => {
+    const version = ++fetchVersion.current;
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       setError('');
-      const [periodsRes, symptomsRes, predsRes] = await Promise.all([
-        api.get('/periods'),
+      const [symptomsRes, predsRes] = await Promise.all([
         api.get('/symptoms'),
-        api.get('/predictions')
+        api.get('/predictions', { params: { today: localDateKey() } })
       ]);
-      if (periodsRes.data.success) setPeriods(periodsRes.data.data.periods);
+      if (version !== fetchVersion.current) return;
+      if (predsRes.data.success) setPeriods(predsRes.data.data.periods);
       if (symptomsRes.data.success) setSymptoms(symptomsRes.data.data.symptoms);
       if (predsRes.data.success) setPredictions(predsRes.data.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch dashboard intelligence.');
+      if (version === fetchVersion.current) setError(err.response?.data?.message || 'Failed to fetch dashboard intelligence.');
     } finally {
-      setLoading(false);
+      if (version === fetchVersion.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchData();
+    const stop = watchCalendarDate(() => fetchData(true));
+    return () => { stop(); ++fetchVersion.current; };
   }, [fetchData]);
 
   // Toast notification Helper
@@ -159,7 +165,7 @@ const Dashboard = () => {
         showToast('Symptoms logged successfully!');
         setIsSymptomModalOpen(false);
         setSymptomForm({
-          date: new Date().toISOString().split('T')[0],
+          date: localDateKey(),
           cramps: false, headache: false, fatigue: false,
           moodSwings: false, acne: false, bloating: false,
           backPain: false, nausea: false,
@@ -202,7 +208,7 @@ const Dashboard = () => {
   // Calendar triggers
   const handleAddPeriodOnDate = (date) => {
     setPeriodForm({
-      startDate: date.toISOString().split('T')[0],
+      startDate: localDateKey(date),
       endDate: '',
       notes: ''
     });
@@ -212,7 +218,7 @@ const Dashboard = () => {
   const handleLogSymptomOnDate = (date) => {
     setSymptomForm(prev => ({
       ...prev,
-      date: date.toISOString().split('T')[0]
+      date: localDateKey(date)
     }));
     setIsSymptomModalOpen(true);
   };
@@ -291,7 +297,7 @@ const Dashboard = () => {
                 symptoms={symptoms}
                 onEdit={(s) => setEditItem({
                   type: 'symptom',
-                  data: { ...s, date: s.date ? s.date.split('T')[0] : new Date().toISOString().split('T')[0] }
+                  data: { ...s, date: s.date ? s.date.split('T')[0] : localDateKey() }
                 })}
                 onDelete={(id) => setDeleteItemId({ type: 'symptom', id })}
               />

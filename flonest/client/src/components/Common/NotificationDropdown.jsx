@@ -1,3 +1,4 @@
+import { calendarDaysBetween, localDateKey } from '../../utils/calendarDate';
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Calendar, Droplet, Heart, CheckCircle2 } from 'lucide-react';
 
@@ -57,10 +58,7 @@ const NotificationDropdown = ({ predictions, periods, symptoms }) => {
       }
 
       if (predictions.ovulationDate) {
-        const today = new Date();
-        const ovDate = new Date(predictions.ovulationDate);
-        const diffTime = ovDate - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffDays = calendarDaysBetween(predictions.asOfDate || localDateKey(), predictions.ovulationDate);
 
         if (diffDays === 0) {
           items.push({

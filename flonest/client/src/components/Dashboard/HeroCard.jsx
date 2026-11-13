@@ -5,10 +5,10 @@ const HeroCard = ({ predictions, user }) => {
   const daysRemaining = predictions?.daysRemaining ?? null;
   const currentPhase = predictions?.status || 'Unknown Phase';
   const averageCycleLength = predictions?.averageCycleLength ?? user?.averageCycleLength ?? 28;
-  const currentDay = predictions?.currentCycleDay ?? 1;
+  const currentDay = predictions?.currentCycleDay ?? null;
 
   // Percentage for progress ring
-  const percentage = Math.min(100, Math.max(0, (currentDay / averageCycleLength) * 100));
+  const percentage = predictions?.cycleProgress ?? 0;
 
   // Determine soft theme colors for cycle phase
   const getPhaseTheme = (phase) => {
@@ -51,6 +51,10 @@ const HeroCard = ({ predictions, user }) => {
   };
 
   const phaseMeta = getPhaseTheme(currentPhase);
+  if (currentDay === null) {
+    phaseMeta.label = 'No cycle data';
+    phaseMeta.desc = 'Log a period start date to see your cycle information.';
+  }
   const strokeDashoffset = 251.2 - (251.2 * percentage) / 100;
 
   return (
@@ -64,10 +68,10 @@ const HeroCard = ({ predictions, user }) => {
         <div className="space-y-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Your Cycle at a Glance</span>
           <h1 className="font-outfit font-extrabold text-3xl md:text-4xl text-slate-800 dark:text-white">
-            Day {currentDay}
+            {currentDay === null ? 'No cycle data' : `Day ${currentDay}`}
           </h1>
           <p className="text-xs text-slate-400 dark:text-zinc-400 font-semibold">
-            of your {averageCycleLength}-day cycle
+            {currentDay === null ? 'No recorded period has started yet' : `of your ${averageCycleLength}-day cycle`}
           </p>
         </div>
 
@@ -124,7 +128,7 @@ const HeroCard = ({ predictions, user }) => {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-outfit font-black text-2xl text-slate-800 dark:text-white leading-none">
-            {Math.round(percentage)}%
+            {currentDay === null ? '—' : `${Math.round(percentage)}%`}
           </span>
           <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-bold uppercase tracking-wider mt-0.5">
             complete

@@ -1,3 +1,4 @@
+import { calendarDate } from '../../utils/calendarDate';
 import React, { useState } from 'react';
 import { 
   ResponsiveContainer, LineChart, Line, BarChart, Bar, 
@@ -11,7 +12,7 @@ const ChartCard = ({ periods, symptoms }) => {
   // Format date helper
   const fmtDate = (dStr) => {
     if (!dStr) return '';
-    return new Date(dStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return calendarDate(dStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   // 1. Data formulation: Cycle lengths

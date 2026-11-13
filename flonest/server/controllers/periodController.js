@@ -1,5 +1,5 @@
 const Period = require('../models/Period');
-const { calculatePeriodDuration, getDaysDifference } = require('../utils/calculateCycle');
+const { calculatePeriodDuration, getDaysDifference, addDays } = require('../utils/calculateCycle');
 
 // Helper to format consistent success response
 const sendSuccessResponse = (res, statusCode, message, data = {}) => {
@@ -16,8 +16,8 @@ const sendSuccessResponse = (res, statusCode, message, data = {}) => {
 exports.createPeriod = async (req, res, next) => {
   try {
     const { startDate, endDate, notes } = req.body;
-    const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : null;
+    const start = addDays(startDate, 0);
+    const end = endDate ? addDays(endDate, 0) : null;
 
     // Check for overlap with existing logs
     const existingOverlap = await Period.findOne({
@@ -115,8 +115,13 @@ exports.updatePeriod = async (req, res, next) => {
     const { startDate, endDate, notes } = req.body;
     const period = req.resource; // From authorizeResource middleware
 
-    if (startDate) period.startDate = new Date(startDate);
-    if (endDate !== undefined) period.endDate = endDate ? new Date(endDate) : null;
+    // A moved record can change the predecessor of its former successor too.
+    const oldNext = startDate ? await Period.findOne({
+      user: req.user.id, startDate: { $gt: period.startDate }, _id: { $ne: period._id }
+    }).sort({ startDate: 1 }) : null;
+
+    if (startDate) period.startDate = addDays(startDate, 0);
+    if (endDate !== undefined) period.endDate = endDate ? addDays(endDate, 0) : null;
     if (notes !== undefined) period.notes = notes;
 
     // Recalculate duration
@@ -151,6 +156,14 @@ exports.updatePeriod = async (req, res, next) => {
     if (nextPeriod) {
       nextPeriod.cycleLength = getDaysDifference(period.startDate, nextPeriod.startDate);
       await nextPeriod.save();
+    }
+
+    if (oldNext && String(oldNext._id) !== String(nextPeriod?._id)) {
+      const predecessor = await Period.findOne({
+        user: req.user.id, startDate: { $lt: oldNext.startDate }, _id: { $ne: oldNext._id }
+      }).sort({ startDate: -1 });
+      oldNext.cycleLength = predecessor ? getDaysDifference(predecessor.startDate, oldNext.startDate) : 0;
+      await oldNext.save();
     }
 
     return sendSuccessResponse(res, 200, 'Period updated successfully', { period });

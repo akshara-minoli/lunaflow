@@ -1,23 +1,15 @@
-/**
- * Helper to calculate date difference in days (inclusive of fractions)
- */
-const getDaysDifference = (d1, d2) => {
-  const date1 = new Date(d1);
-  const date2 = new Date(d2);
-  // Reset times to midnight for precise date calculations
-  date1.setHours(0, 0, 0, 0);
-  date2.setHours(0, 0, 0, 0);
-  
-  const diffTime = date2.getTime() - date1.getTime();
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+// Saved dates are calendar labels at UTC midnight, not timezone-dependent instants.
+const dateKey = value => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+const isCalendarDate = value => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + 'T00:00:00.000Z');
+  return !Number.isNaN(date.getTime()) && dateKey(date) === value;
 };
-
-/**
- * Helper to add days to a date
- */
-const addDays = (date, days) => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
+const getDaysDifference = (from, to) =>
+  (Date.parse(dateKey(to) + 'T00:00:00Z') - Date.parse(dateKey(from) + 'T00:00:00Z')) / 86400000;
+const addDays = (value, days) => {
+  const result = new Date(dateKey(value) + 'T00:00:00Z');
+  result.setUTCDate(result.getUTCDate() + days);
   return result;
 };
 
@@ -91,20 +83,43 @@ const calculateFertileWindow = (ovulationDate) => {
  * Calculate remaining days from today until target date
  * @param {Date|string} targetDate
  */
-const calculateRemainingDays = (targetDate) => {
-  if (!targetDate) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return getDaysDifference(today, targetDate);
-};
+const calculateRemainingDays = (targetDate, today = dateKey(new Date())) =>
+  targetDate ? getDaysDifference(today, targetDate) : null;
 
+// Only a recorded period starts a new cycle; never wrap at the predicted length.
+const calculateCycleState = (periods, user, today) => {
+  const history = periods.filter(p => dateKey(p.startDate) <= today)
+    .slice().sort((a, b) => dateKey(a.startDate).localeCompare(dateKey(b.startDate)));
+  const averageCycleLength = calculateAverageCycle(history, user.averageCycleLength || 28);
+  const empty = {
+    asOfDate: today, averageCycleLength, currentCycleDay: null,
+    cycleProgress: null, status: null, lastPeriodStart: null,
+    nextPeriod: null, daysRemaining: null, lateEarlyStatus: 'no_data',
+    ovulationDate: null, fertileWindow: null
+  };
+  if (!history.length) return empty;
+  const last = history[history.length - 1];
+  const currentCycleDay = getDaysDifference(last.startDate, today) + 1;
+  const nextPeriod = calculateNextPeriod(last.startDate, averageCycleLength);
+  const ovulationDate = calculateOvulation(nextPeriod);
+  const fertileWindow = calculateFertileWindow(ovulationDate);
+  const daysRemaining = calculateRemainingDays(nextPeriod, today);
+  const periodLength = last.endDate ? calculatePeriodDuration(last.startDate, last.endDate) : (user.averagePeriodLength || 5);
+  const ovulationDay = getDaysDifference(last.startDate, ovulationDate) + 1;
+  const status = currentCycleDay <= periodLength ? 'Menstrual Phase'
+    : currentCycleDay < ovulationDay ? 'Follicular Phase'
+    : currentCycleDay === ovulationDay ? 'Ovulatory Phase' : 'Luteal Phase';
+  return {
+    ...empty, currentCycleDay, status,
+    cycleProgress: Math.min(100, currentCycleDay / averageCycleLength * 100),
+    lastPeriodStart: dateKey(last.startDate), nextPeriod: dateKey(nextPeriod),
+    daysRemaining, lateEarlyStatus: daysRemaining < 0 ? 'late' : daysRemaining === 0 ? 'today' : 'on_time',
+    ovulationDate: dateKey(ovulationDate),
+    fertileWindow: { start: dateKey(fertileWindow.start), end: dateKey(fertileWindow.end) }
+  };
+};
 module.exports = {
-  calculateAverageCycle,
-  calculatePeriodDuration,
-  calculateNextPeriod,
-  calculateOvulation,
-  calculateFertileWindow,
-  calculateRemainingDays,
-  getDaysDifference,
-  addDays
+  calculateAverageCycle, calculatePeriodDuration, calculateNextPeriod,
+  calculateOvulation, calculateFertileWindow, calculateRemainingDays,
+  getDaysDifference, addDays, dateKey, isCalendarDate, calculateCycleState
 };

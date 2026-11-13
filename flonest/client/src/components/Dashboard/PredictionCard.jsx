@@ -1,3 +1,4 @@
+import { calendarDate } from '../../utils/calendarDate';
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Sparkles, CheckCircle2, ChevronRight } from 'lucide-react';
 
@@ -6,9 +7,10 @@ const PredictionCard = ({ predictions }) => {
 
   // Calculate live countdown to the next expected period date
   useEffect(() => {
+    setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     if (!predictions?.nextPeriod) return;
 
-    const targetDate = new Date(predictions.nextPeriod);
+    const targetDate = calendarDate(predictions.nextPeriod);
     targetDate.setHours(0, 0, 0, 0); // start of day
 
     const timer = setInterval(() => {
@@ -32,11 +34,11 @@ const PredictionCard = ({ predictions }) => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return calendarDate(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   // Regularity / Confidence score logic (mocked nicely based on data logs)
-  const regularityConfidence = predictions?.daysRemaining !== null ? 92 : 45;
+  const regularityConfidence = predictions?.daysRemaining !== null ? 92 : 0;
 
   return (
     <div className="glass-panel p-6 rounded-3xl space-y-6 relative overflow-hidden border">
@@ -66,7 +68,7 @@ const PredictionCard = ({ predictions }) => {
               { val: countdown.minutes, label: 'Mins' }
             ].map((unit, idx) => (
               <div key={idx} className="flex-1 bg-violet-500/5 dark:bg-zinc-800/40 border border-violet-100/50 dark:border-zinc-800/80 p-2.5 rounded-2xl text-center">
-                <span className="font-outfit font-extrabold text-xl text-slate-850 dark:text-white block leading-none">{unit.val}</span>
+                <span className="font-outfit font-extrabold text-xl text-slate-850 dark:text-white block leading-none">{predictions.nextPeriod ? unit.val : '—'}</span>
                 <span className="text-[9px] text-slate-400 dark:text-zinc-555 font-bold uppercase tracking-wider mt-0.5 block">{unit.label}</span>
               </div>
             ))}
@@ -94,7 +96,7 @@ const PredictionCard = ({ predictions }) => {
           <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
             <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
               <span className="text-slate-400 dark:text-zinc-555">Cycle Regularity</span>
-              <span className="text-violet-600 dark:text-violet-400">{regularityConfidence}% Confidence</span>
+              <span className="text-violet-600 dark:text-violet-400">{predictions.nextPeriod ? `${regularityConfidence}% Confidence` : 'No data'}</span>
             </div>
             <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
               <div 

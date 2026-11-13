@@ -1,3 +1,4 @@
+import { calendarDate, calendarDaysBetween, localDateKey } from '../../utils/calendarDate';
 import React from 'react';
 import { Calendar, Heart, TrendingUp, Sparkles } from 'lucide-react';
 
@@ -12,8 +13,7 @@ const StatCard = ({ predictions, periods, symptoms, user }) => {
   // Ovulation days remaining calculations
   const getOvulationCountdown = () => {
     if (!predictions?.ovulationDate) return 'No data';
-    const diff = new Date(predictions.ovulationDate) - new Date();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    const days = calendarDaysBetween(predictions.asOfDate || localDateKey(), predictions.ovulationDate);
     if (days === 0) return 'Today!';
     if (days < 0) return 'Passed';
     return `In ${days} day${days > 1 ? 's' : ''}`;
@@ -23,7 +23,7 @@ const StatCard = ({ predictions, periods, symptoms, user }) => {
     {
       id: 'cycle-len',
       label: 'Cycle Length',
-      value: `${cycleLength} Days`,
+      value: predictions?.currentCycleDay == null ? 'No data' : `${cycleLength} Days`,
       sub: 'Average over history',
       icon: <TrendingUp className="w-5 h-5 text-violet-500" />,
       bgColor: 'bg-violet-500/10 dark:bg-violet-500/20 border-violet-500/10'
@@ -39,7 +39,7 @@ const StatCard = ({ predictions, periods, symptoms, user }) => {
     {
       id: 'period-dur',
       label: 'Period Duration',
-      value: `${periodDuration} Days`,
+      value: periods?.length ? `${periodDuration} Days` : 'No data',
       sub: 'Average active bleeding',
       icon: <Calendar className="w-5 h-5 text-rose-500" />,
       bgColor: 'bg-rose-500/10 dark:bg-rose-500/20 border-rose-500/10'
@@ -49,7 +49,7 @@ const StatCard = ({ predictions, periods, symptoms, user }) => {
       label: 'Ovulation',
       value: getOvulationCountdown(),
       sub: predictions?.ovulationDate 
-        ? new Date(predictions.ovulationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        ? calendarDate(predictions.ovulationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         : 'Predicting...',
       icon: <Sparkles className="w-5 h-5 text-teal-500" />,
       bgColor: 'bg-teal-500/10 dark:bg-teal-500/20 border-teal-500/10'

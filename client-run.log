@@ -1,0 +1,13 @@
+
+  VITE v5.4.21  ready in 468 ms
+
+  ➜  Local:   http://127.0.0.1:8081/
+11:37:02 PM [vite] hmr update /src/pages/Dashboard.jsx, /src/index.css
+11:37:54 PM [vite] hmr update /src/pages/Dashboard.jsx, /src/index.css
+11:37:54 PM [vite] hmr update /src/components/Dashboard/HeroCard.jsx, /src/index.css
+11:37:54 PM [vite] hmr update /src/components/Dashboard/CalendarWidget.jsx, /src/index.css
+11:37:54 PM [vite] hmr update /src/components/Dashboard/PredictionCard.jsx, /src/index.css
+11:37:54 PM [vite] hmr update /src/components/Common/NotificationDropdown.jsx, /src/index.css
+11:37:54 PM [vite] hmr update /src/components/Dashboard/RecentPeriodTable.jsx, /src/index.css
+11:37:54 PM [vite] hmr update /src/components/Dashboard/ChartCard.jsx, /src/index.css
+11:37:54 PM [vite] hmr update /src/components/Dashboard/StatCard.jsx, /src/index.css
